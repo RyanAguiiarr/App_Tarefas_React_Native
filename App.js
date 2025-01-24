@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { StyleSheet, Text, View, SafeAreaView , TouchableOpacity, FlatList, Modal, TextInput} from 'react-native';
+import { useState, useCallback, useEffect} from 'react';
+import { StyleSheet, Text, View, SafeAreaView , TouchableOpacity, FlatList, Modal, TextInput, AsyncStorage} from 'react-native';
 import {Ionicons} from "@expo/vector-icons"
 import TaskList from './src/components/TaskList';
 import * as Animatable from "react-native-animatable"
@@ -13,6 +13,27 @@ export default function App() {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState("")
 
+  // BUSCANDO TODAS AS TAREFAS AO INICIAR O APP
+  useEffect(() => {
+    async function loadTasks(){
+      const taskStorage = await AsyncStorage.getItem("@task")
+      if(taskStorage){
+        setTask(JSON.parse(taskStorage))
+      }
+    }
+
+    loadTasks()
+  }, [])
+
+  // SALVANDO CASO TENHA ALGUMA TAREFA ALTERADA
+  useEffect(() => {
+    async function saveTask(){
+      await AsyncStorage.setItem("@task", JSON.stringify(task))
+    }
+
+    saveTask()
+  }, [task])
+
   function handleAdd(){
     if(input === "") return
 
@@ -20,6 +41,11 @@ export default function App() {
       key: input,
       task: input,
     }
+
+    const handelDelete = useCallback((data) => {
+      const find = task.filter(r => r.key !== data.key)
+      setTask(find)
+    })
 
     setTask([...task, data])
     setOpen(false)
@@ -39,7 +65,7 @@ export default function App() {
       showsHorizontalScrollIndicator={false}
       data={task}
       keyExtractor={(item) => String(item.key) }
-      renderItem={({item}) => <TaskList data={item}/>}
+      renderItem={({item}) => <TaskList data={item} handelDelete={handelDelete}/>}
       />
 
       <Modal animationType='slide' transparent={false} visible={open}>
